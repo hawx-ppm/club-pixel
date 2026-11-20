@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#10091c">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Club Pixel 3D - BabacasFest</title>
+<title>BabacasFest</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"></script>
@@ -68,8 +68,7 @@ button:disabled{opacity:.35}
 #rx{position:absolute;right:calc(10px + var(--sr));bottom:calc(196px + var(--sb));display:none;gap:6px;background:rgba(20,10,40,.92);padding:6px;border-radius:30px;z-index:4}
 #rx.open{display:flex}
 #rx button{width:44px;height:44px;padding:0;font-size:22px;border-radius:50%}
-/* Chat redimensionável */
-#chat{position:absolute;left:0;right:0;bottom:0;height:min(60vh,460px);background:rgba(16,9,28,.97);border-top:3px solid var(--line);padding:0 10px calc(10px + var(--sb));display:none;flex-direction:column;z-index:5;-webkit-user-select:text;user-select:text;transition:none}
+#chat{position:absolute;left:0;right:0;bottom:0;height:min(60vh,460px);background:rgba(16,9,28,.97);border-top:3px solid var(--line);padding:0 10px calc(10px + var(--sb));display:none;flex-direction:column;z-index:5;-webkit-user-select:text;user-select:text}
 #chat.open{display:flex}
 #chat-resize{height:16px;cursor:ns-resize;display:flex;align-items:center;justify-content:center;touch-action:none;flex-shrink:0}
 #chat-resize::after{content:'';width:40px;height:4px;border-radius:2px;background:var(--line)}
@@ -83,6 +82,7 @@ button:disabled{opacity:.35}
 #log div{margin-bottom:6px}
 #quick{display:flex;gap:6px;overflow-x:auto;padding:8px 0 0;touch-action:pan-x}
 .row{display:flex;gap:8px;margin-top:8px}.row input{margin-top:0}
+.credit{text-align:center;font-size:8px;opacity:.4;margin-top:16px;letter-spacing:1px}
 </style>
 </head>
 <body>
@@ -99,19 +99,24 @@ button:disabled{opacity:.35}
    <p id="msg"></p>
    <p id="until" class="sub" style="margin-top:14px"></p>
    <p class="sub" style="margin:0">Celular: joystick e botões na tela. Computador: setas ou WASD.</p>
+   <div class="credit">criado por Hawx</div>
   </div>
  </div>
  <div id="game" class="hide">
   <div id="cvw"><div id="ov"></div></div>
   <div id="top">
-   <div id="topl"><b id="rn"></b><div id="near"></div><div id="mus"></div></div>
+   <div id="topl"><b id="rn"></b> <span id="online" style="font-size:9px;opacity:.8;margin-left:6px;display:none">👥 0 online</span><div id="near"></div><div id="mus"></div></div>
    <span id="tb"><button class="ib" id="chatbtn" aria-label="Conversa">🗨️<i id="cdot" class="dot hide"></i></button><button class="ib" id="mute" aria-label="Som">🔇</button><button class="ib" id="out" aria-label="Sair">✖</button></span>
   </div>
   <div id="mini"></div>
   <div id="reqs"></div>
   <div id="toast"></div>
   <div id="jk" class="hide">
-   <button data-t="0">🎵 Dance Monster</button><button data-t="1">🎵 Enter the Party</button><button data-t="2">🎵 Electro Sketch</button><button data-t="3">🎵 Son of a Rocket</button><button data-t="-1">⏹ Parar</button>
+   <button data-t="0">Sambabacas - Dance Monster</button>
+   <button data-t="1">Sambabacas - Enter the Party</button>
+   <button data-t="2">Sambabacas - Electro Sketch</button>
+   <button data-t="3">Sambabacas - Son of a Rocket</button>
+   <button data-t="-1">⏹ Parar</button>
   </div>
   <div id="joy"><div id="knob"></div></div>
   <div id="rx"><button data-e="🔥">🔥</button><button data-e="👏">👏</button><button data-e="🎉">🎉</button><button data-e="😂">😂</button><button data-e="❤️">❤️</button></div>
@@ -139,18 +144,21 @@ button:disabled{opacity:.35}
 </div>
 <script>
 // ======================= CONFIGURAÇÃO =======================
-const HIVEMQ={host:'',user:'',pass:''};
+const HIVEMQ={
+  host:'i262bdb3.ala.eu-central-1.emqxsl.com', // O Connection Address do EMQX (sem wss:// e sem porta)
+  user:'hawx',       // O usuário que você criou
+  pass:'*Cabritoneon17#'          // A senha que você definiu
+};
 const PARTY={open:'',close:''};
-const NS='cp3-babacasfest';
+const NS='cp3-babacasfest-v3';
 // ==========================================================================
 const $=id=>document.getElementById(id);
 const ROOMS=[
  {id:'babacas',name:'BabacasFest',e:'🎉',p:[0xff2d95,0x22d3ee,0x8a5cff]}
 ];
-const WX=32,WZ=24,CELL=12,NCX=6,NCZ=4;
+const WX=32,WZ=24;
 const r2=v=>Math.round(v*100)/100;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-function cellOf(x,z){return [clamp(Math.floor((x+WX)/CELL),0,NCX-1),clamp(Math.floor((z+WZ)/CELL),0,NCZ-1)]}
 const tOpen=PARTY.open?new Date(PARTY.open).getTime():0,tClose=PARTY.close?new Date(PARTY.close).getTime():Infinity;
 const phase=()=>{const n=Date.now();return n<tOpen?'before':(n>tClose?'after':'open')};
 const SKIN=[0xf6d3b3,0xf0c09a,0xd9a27a,0xb97a52,0x8a5a3a,0x5a3a28];
@@ -160,66 +168,63 @@ const PANTSC=[0x3a2f55,0x222222,0x3a5a8a,0x6a4a2a,0x8a2a3a,0xdddddd];
 const HEX=c=>'#'+c.toString(16).padStart(6,'0');
 const SHCSS=i=>HEX(SHIRTC[(i|0)%10]);
 
-// ======================= MÚSICAS ONLINE (Internet Archive, Kevin MacLeod CC) =======================
+// ======================= MÚSICAS ONLINE =======================
 const SONGS=[
- {n:'Dance Monster',url:'https://ia800300.us.archive.org/15/items/Kevin-MacLeod_Medium-Electronic_2008_FullAlbum/Kevin%20MacLeod%20-%2003%20-%20Dance%20Monster.mp3',dur:180},
- {n:'Enter the Party',url:'https://ia800300.us.archive.org/15/items/Kevin-MacLeod_Medium-Electronic_2008_FullAlbum/Kevin%20MacLeod%20-%2006%20-%20Enter%20the%20Party.mp3',dur:180},
- {n:'Electro Sketch',url:'https://ia800300.us.archive.org/15/items/Kevin-MacLeod_Medium-Electronic_2008_FullAlbum/Kevin%20MacLeod%20-%2005%20-%20Electro%20%28Sketch%29.mp3',dur:150},
- {n:'Son of a Rocket',url:'https://ia800300.us.archive.org/15/items/Kevin-MacLeod_Medium-Electronic_2008_FullAlbum/Kevin%20MacLeod%20-%2017%20-%20Son%20of%20a%20Rocket.mp3',dur:210}
+ {n:'Sambabacas - Dance Monster',url:'https://ia800300.us.archive.org/15/items/Kevin-MacLeod_Medium-Electronic_2008_FullAlbum/Kevin%20MacLeod%20-%2003%20-%20Dance%20Monster.mp3',dur:180},
+ {n:'Sambabacas - Enter the Party',url:'https://ia800300.us.archive.org/15/items/Kevin-MacLeod_Medium-Electronic_2008_FullAlbum/Kevin%20MacLeod%20-%2006%20-%20Enter%20the%20Party.mp3',dur:180},
+ {n:'Sambabacas - Electro Sketch',url:'https://ia800300.us.archive.org/15/items/Kevin-MacLeod_Medium-Electronic_2008_FullAlbum/Kevin%20MacLeod%20-%2005%20-%20Electro%20%28Sketch%29.mp3',dur:150},
+ {n:'Sambabacas - Son of a Rocket',url:'https://ia800300.us.archive.org/15/items/Kevin-MacLeod_Medium-Electronic_2008_FullAlbum/Kevin%20MacLeod%20-%2017%20-%20Son%20of%20a%20Rocket.mp3',dur:210}
 ];
 
-// ======================= Rede (MQTT) =======================
+// ======================= Rede (MQTT) — tópico único =======================
 async function connectNet(room,H){
  const id=Math.random().toString(36).slice(2,12),base=NS+'/'+room+'/';
  const brokers=HIVEMQ.host?[{url:'wss://'+HIVEMQ.host+':8884/mqtt',username:HIVEMQ.user,password:HIVEMQ.pass}]:[{url:'wss://broker.hivemq.com:8884/mqtt'},{url:'wss://broker.emqx.io:8084/mqtt'}];
  let client=null;
  for(const b of brokers){
   try{client=await new Promise((res,rej)=>{
-   const o={clientId:'cp_'+id,keepalive:20,reconnectPeriod:2000,connectTimeout:6000,clean:true};if(b.username){o.username=b.username;o.password=b.password}
+   const o={clientId:'cp_'+id,keepalive:30,reconnectPeriod:1500,connectTimeout:6000,clean:true};if(b.username){o.username=b.username;o.password=b.password}
    const c=mqtt.connect(b.url,o);const to=setTimeout(()=>{c.removeAllListeners();c.end(true);rej(new Error('timeout'))},8000);
    const ok=()=>{clearTimeout(to);c.removeListener('error',bad);res(c)},bad=e=>{clearTimeout(to);c.removeAllListeners();c.end(true);rej(e)};
    c.once('connect',ok);c.once('error',bad)});break}catch(e){client=null}}
  if(!client){const e=new Error('sem conexao');e.code='SEM_CONEXAO';throw e}
- let cells=new Set(),myCell=null,wasOn=true;
- const pt=c=>base+'p/'+c+'/';
+ let wasOn=true;
  const send=(t,m,o)=>{if(client.connected)client.publish(t,m,o||{qos:0})};
- const sub=()=>{client.subscribe([base+'g',base+'m',base+'d/'+id]);cells.forEach(c=>client.subscribe(pt(c)+'+'))};
+ const sub=()=>{client.subscribe([base+'p',base+'g',base+'m',base+'d/'+id,base+'on'])};
  client.on('error',()=>{});
  client.on('close',()=>{if(wasOn&&H.disc)H.disc()});
  client.on('connect',sub);
  client.on('message',(tp,pl)=>{
-  if(tp.startsWith(base+'p/')){const rest=tp.slice(base.length+2),i=rest.indexOf('/'),cell=rest.slice(0,i),pid=rest.slice(i+1);if(pid===id)return;let q;try{q=JSON.parse(pl.toString())}catch(e){return}H.state(pid,cell,q)}
+  if(tp===base+'p'){let q;try{q=JSON.parse(pl.toString())}catch(e){return}
+    if(q.id===id)return;
+    H.state(q.id,'all',q);
+  }
   else if(tp===base+'g'){try{H.global(JSON.parse(pl.toString()))}catch(e){}}
   else if(tp===base+'d/'+id){try{H.dm(JSON.parse(pl.toString()))}catch(e){}}
-  else if(tp===base+'m'){const s=pl.toString();try{H.music(s?JSON.parse(s):null)}catch(e){}}});
+  else if(tp===base+'m'){const s=pl.toString();try{H.music(s?JSON.parse(s):null)}catch(e){}}
+  else if(tp===base+'on'){try{H.online(JSON.parse(pl.toString()))}catch(e){}}});
  sub();
  return {
   id:id,
-  setCell(cx,cz){const key=cx+'_'+cz;if(key===myCell)return false;const old=myCell;myCell=key;
-   const want=new Set();for(let a=cx-1;a<=cx+1;a++)for(let b=cz-1;b<=cz+1;b++)if(a>=0&&b>=0&&a<NCX&&b<NCZ)want.add(a+'_'+b);
-   for(const c of cells)if(!want.has(c))client.unsubscribe(pt(c)+'+');
-   for(const c of want)if(!cells.has(c))client.subscribe(pt(c)+'+');
-   cells=want;if(old)send(pt(old)+id,'{"g":1}');return {old:old}},
-  has:c=>cells.has(c),
-  pub(q){if(myCell)send(pt(myCell)+id,JSON.stringify(q))},
+  setCell(){return false},
+  has:()=>true,
+  pub(q){q.id=id;send(base+'p',JSON.stringify(q))},
+  ping(){send(base+'on',JSON.stringify({id:id,t:Date.now()}))},
   global:m=>send(base+'g',JSON.stringify(m)),
   dm:(to,m)=>send(base+'d/'+to,JSON.stringify(m),{qos:1}),
   music:m=>send(base+'m',m?JSON.stringify(m):'',{qos:1,retain:true}),
-  leave(){wasOn=false;if(myCell)send(pt(myCell)+id,'{"g":1}');const c=client;setTimeout(()=>{try{c.end(true)}catch(e){}},400)}
+  leave(){wasOn=false;send(base+'p',JSON.stringify({id:id,g:1}));const c=client;setTimeout(()=>{try{c.end(true)}catch(e){}},400)}
  }}
 
-// ======================= Música: batida padrão + faixas online =======================
+// ======================= Música =======================
 let AC=null,mute=true,cur=-1,seqT=0,stp=0,nextT=0,audioEl=null,musicLockUntil=0,musicBy='';
-// Batida padrão (kick + hi-hat)
 function playBeat(){
  if(!AC||mute)return;
  const t=AC.currentTime;
- // Kick
  const o=AC.createOscillator(),g=AC.createGain();
  o.type='sine';o.frequency.setValueAtTime(120,t);o.frequency.exponentialRampToValueAtTime(40,t+0.1);
  g.gain.setValueAtTime(0.3,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.15);
  o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+0.15);
- // Hi-hat
  const n=AC.createBufferSource();const buf=AC.createBuffer(1,1024,AC.sampleRate);
  const d=buf.getChannelData(0);for(let i=0;i<1024;i++)d[i]=Math.random()*2-1;
  n.buffer=buf;const f=AC.createBiquadFilter();f.type='highpass';f.frequency.value=6000;
@@ -317,28 +322,28 @@ function sign(text,c,w){const cv=document.createElement('canvas');cv.width=512;c
  g.font='bold '+Math.floor(Math.min(54,460/text.length))+'px "Press Start 2P",monospace';g.textAlign='center';g.textBaseline='middle';
  g.shadowColor=HEX(c);g.shadowBlur=26;g.fillStyle='#fff';g.fillText(text,256,50);g.shadowBlur=10;g.fillStyle=HEX(c);g.fillText(text,256,50);
  return new THREE.Mesh(new THREE.PlaneGeometry(w,w*96/512),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(cv),transparent:true}))}
-// retângulos de colisão [x0,z0,x1,z1]
-const RECTS=[[-8,-24,8,-16],[-12,-24,-10,-20],[10,-24,12,-20],[26,-8.2,32,12]];
-// Mezanino: piso elevado em x∈[8,26], z∈[-18,-10], altura 0.9
-// Escada lateral: x∈[27,31], z de -10 (topo) a -2 (base), sobe de 0.9 a 0
-// Paredes do mezanino (frente e laterais) para colisão de quem está embaixo
-RECTS.push([8,-10,26,-9.6]); // parede frontal do mezanino (frente)
-RECTS.push([8,-18,8.4,-10]); // lateral esquerda
-RECTS.push([25.6,-18,26,-10]); // lateral direita (com abertura para escada)
-// Escada: corrimão lateral
-RECTS.push([27,-10.4,31,-10]); // topo da escada
-// Bar
-RECTS.push([24,2,28,12]);
-// DJ
-RECTS.push([-6,-24,6,-18]);
+function creditSign(text){const cv=document.createElement('canvas');cv.width=256;cv.height=64;const g=cv.getContext('2d');
+ g.font='bold 20px monospace';g.textAlign='center';g.textBaseline='middle';
+ g.fillStyle='rgba(255,255,255,0.4)';g.fillText(text,128,32);
+ return new THREE.Mesh(new THREE.PlaneGeometry(4,1),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(cv),transparent:true}))}
+
+const RECTS=[
+ [-6,-24,6,-20],
+ [26,2,30,12],
+ [8,-18,8.4,-10],
+ [25.6,-18,26,-10],
+ [-30,-14,-28,-12],[-30,-8,-28,-6],[-30,-2,-28,0],[-30,4,-28,6],[-30,10,-28,12]
+];
 const elevAt=(x,z)=>{
- // Mezanino
  if(x>=8&&x<=26&&z>=-18&&z<=-10)return 0.9;
- // Escada (rampa): x∈[27,31], z∈[-10,-2], topo em z=-10 (h=0.9), base em z=-2 (h=0)
- if(x>=27&&x<=31&&z>=-10&&z<=-2){const t=(z+10)/8;return 0.9*(1-t)}
+ if(x>=26&&x<=30&&z>=-10&&z<=-2){const t=(z+10)/8;return 0.9*(1-t)}
  return 0;
 };
-function blocked(x,z){const r=.3;if(x<-31.4||x>31.4||z<-23.4||z>23.4)return true;return RECTS.some(o=>x+r>o[0]&&x-r<o[2]&&z+r>o[1]&&z-r<o[3])}
+function blocked(x,z){
+ const r=.3;
+ if(x<-31.4||x>31.4||z<-23.4||z>23.4)return true;
+ return RECTS.some(o=>x+r>o[0]&&x-r<o[2]&&z+r>o[1]&&z-r<o[3]);
+}
 function buildWorld(r){
  const sc=new THREE.Scene(),c1=r.p[0],c2=r.p[1],c3=r.p[2];
  sc.background=new THREE.Color(0x0b0714);sc.fog=new THREE.Fog(0x0b0714,55,150);
@@ -353,28 +358,48 @@ function buildWorld(r){
  // Paredes
  sc.add(box(64.6,6,.3,0x1c1230,0,3,-24.15),box(.3,6,48.6,0x1c1230,-32.15,3,0),box(.3,6,48.6,0x1c1230,32.15,3,0));
  sc.add(neon(64,.08,.08,c1,0,.25,-23.95),neon(64,.08,.08,c2,0,5.6,-23.95),neon(.08,.08,48,c1,-31.95,.25,0),neon(.08,.08,48,c2,-31.95,5.6,0),neon(.08,.08,48,c1,31.95,.25,0),neon(.08,.08,48,c2,31.95,5.6,0));
- // Mezanino (piso elevado)
- sc.add(box(18,.3,8,0x2a1a44,17,.9,-14),neon(18,.04,.06,c1,17,.92,-9.98),neon(.06,.04,8,c1,8.02,.92,-14));
- // Escada lateral (degraus)
- for(let i=0;i<8;i++){const z=-10+i*1;const h=0.9*(1-i/7);sc.add(box(4,0.12,1,0x3a2a50,29,h,z))}
- // Corrimão da escada
- sc.add(neon(.1,.1,8,c2,27,.95,-6),neon(.1,.1,8,c2,31,.95,-6));
+ // Placas Grandes BabacasFest
+ const s1=sign('BABACASFEST',c1,12);s1.position.set(0,5.1,-23.88);sc.add(s1);
+ const s2=sign('BABACASFEST',c2,12);s2.rotation.y=-Math.PI/2;s2.position.set(31.8,4.5,0);sc.add(s2);
+ const s3=sign('BABACASFEST',c3,12);s3.rotation.y=Math.PI/2;s3.position.set(-31.8,4.5,0);sc.add(s3);
+ // Crédito Discreto
+ const cd=creditSign('criado por Hawx');cd.rotation.x=-Math.PI/2;cd.position.set(-10,.05,10);sc.add(cd);
+ const cd2=creditSign('criado por Hawx');cd2.rotation.y=Math.PI;s2.position.set(-31.8,2,0);sc.add(cd2);
+ 
+ // Mezanino
+ sc.add(box(18,.12,8,0x2a1a44,17,.9,-14));
+ sc.add(neon(18,.04,.06,c1,17,.92,-9.98));
+ sc.add(neon(.06,.04,8,c1,8.02,.92,-14));
+ sc.add(neon(18,.06,.06,c2,17,1.35,-9.98));
+ [10,17,24].forEach(x=>{sc.add(box(.3,1.8,.3,0x3a2a50,x,.45,-11));sc.add(box(.3,1.8,.3,0x3a2a50,x,.45,-17))});
+ // Escada
+ for(let i=0;i<8;i++){
+   const z=-10+i*1;
+   const h=0.9*(1-i/7);
+   sc.add(box(4,0.12,1,0x3a2a50,28,h,z));
+   sc.add(neon(4,.02,.04,c2,28,h+.07,z));
+ }
+ for(let i=0;i<8;i++){
+   const z=-10+i*1, h=0.9*(1-i/7);
+   sc.add(neon(.06,.5,.06,c2,26.2,h+.25,z));
+   sc.add(neon(.06,.5,.06,c2,29.8,h+.25,z));
+ }
+ sc.add(neon(.06,.6,8,c2,26.1,1.25,-14));
+ sc.add(neon(.06,.6,8,c2,29.9,1.25,-14));
  // Palco DJ
  const scrC=document.createElement('canvas');scrC.width=256;scrC.height=96;const scrT=new THREE.CanvasTexture(scrC);
  const scr=new THREE.Mesh(new THREE.PlaneGeometry(8,3),new THREE.MeshBasicMaterial({map:scrT}));scr.position.set(0,3.2,-23.9);sc.add(scr);
- const sg=sign(r.name.toUpperCase(),c1,8);sg.position.set(0,5.1,-23.88);sc.add(sg);
  sc.add(box(12,.4,5,0x140c22,0,.2,-21.5),box(6,1,1.4,0x1a1030,0,.9,-21.2),neon(6,.1,.05,c1,0,.75,-20.48),box(6.1,.08,1.5,0x2a1a40,0,1.44,-21.2));
  [-1.3,1.3].forEach(s=>{sc.add(cyl(.45,.45,.06,0x222233,s,1.52,-21.2),neon(.55,.02,.55,c2,s,1.49,-21.2))});
- // Woofers
  [-8.5,8.5].forEach(sx=>{sc.add(box(1.4,2.8,1.1,0x0e0a14,sx,1.4,-22.8));[[.8,.4],[1.9,.22]].forEach(w=>{const m=cyl(w[1],w[1],.1,0x333344,sx,w[0],-22.2);m.rotation.x=Math.PI/2;sc.add(m)})});
- // Bar (área x 24-28, z 2-12)
+ // Bar
  sc.add(box(1.4,1.1,10,0x2a1a38,26,.55,7),box(1.5,.08,10.2,0x3a2a50,26,1.14,7),neon(.05,.05,10.2,c2,25.25,1.1,7));
  for(let i=0;i<5;i++)sc.add(cyl(.28,.28,.7,0x2a2a3a,24,.35,3+i*2),cyl(.34,.34,.12,c3,24,.75,3+i*2));
  const sb=sign('BAR',c2,4);sb.rotation.y=-Math.PI/2;sb.position.set(28,4.5,7);sc.add(sb);
- // Lounge (área x -30..-20, z variado)
+ // Lounge
  [-10,-4,2,8].forEach(z=>{sc.add(box(1.4,.5,3,0x2a1a44,-29,.25,z),box(.3,1,3,0x2a1a44,-29.7,.8,z),box(1.1,.2,2.8,0x5a2a7a,-28.8,.6,z),box(.9,.45,1.6,0x1a1026,-27,.22,z),neon(.9,.03,1.6,c2,-27,.46,z))});
  const sl=sign('LOUNGE',c3,5);sl.rotation.y=Math.PI/2;sl.position.set(-31.8,4.3,0);sc.add(sl);
- // Tetos: globos, feixes
+ // Tetos
  const balls=[];[-8,0,8].forEach(x=>{const b=new THREE.Mesh(new THREE.IcosahedronGeometry(.6,1),new THREE.MeshStandardMaterial({color:0xcfd8ff,metalness:.9,roughness:.25,flatShading:true,emissive:0x222244}));b.position.set(x,5.2,0);sc.add(b);balls.push(b)});
  sc.add(neon(40,.1,.1,c1,0,5.9,-8),neon(40,.1,.1,c2,0,5.9,8));
  const beams=[];[-16,-12,-8,-4,0,4,8,12,16].forEach((x,i)=>{const g=new THREE.Group();g.position.set(x,5.9,(i%2?6:-6));const geo=new THREE.CylinderGeometry(.03,1.1,6.4,16,1,true);geo.translate(0,-3.2,0);
@@ -393,6 +418,7 @@ function animWorld(W,k,bpm,pulse,now){
 
 // ======================= Jogo =======================
 let net=null,GL=null,raf=0,last=0,myName='',myId='',me=null,mine=null,R={},convos={},tab='g',activeC=null,glog=[],gUnread=false,blockedIds={},pending={},lastPub=0,lastKey='',force=false,nearE=null,joyId=null,lastNearOn=null,lastJk=null,lastFull=0,helloP=null;
+let onlinePeers={}; // Contador online
 const joy={x:0,y:0},keys={};
 const EMO={wave:'👋',talk:'💬',flirt:'😉',kiss:'💋',hug:'🤗'};
 const RQ={kiss:'quer te beijar 💋',hug:'quer te abraçar 🤗',dance:'quer dançar com você 👯'};
@@ -418,31 +444,35 @@ async function enter(r){
  try{localStorage.setItem('cp_name',n)}catch(e){}
  try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();AC.resume()}catch(e){AC=null}
  say('Conectando…');
- try{net=await connectNet(r.id,{state:onState,global:onGlobal,dm:onDM,music:onMusic,disc:()=>mini('Conexão instável…')})}
+ try{net=await connectNet(r.id,{state:onState,global:onGlobal,dm:onDM,music:onMusic,online:onOnline,disc:()=>mini('Conexão instável…')})}
  catch(e){net=null;say(e&&e.code==='SEM_CONEXAO'?'Sem conexão com o servidor. Tente de novo em instantes.':'Não foi possível entrar.');return}
  say('');stopPreview();
- myName=n;myId=net.id;R={};convos={};glog=[];tab='g';activeC=null;gUnread=false;blockedIds={};pending={};cur=-1;lastKey='';lastPub=0;lastFull=0;force=true;helloP=null;lastNearOn=null;lastJk=null;musicLockUntil=0;musicBy='';
- me={x:r2((Math.random()-.5)*10),y:12,d:0,s:0,h:0};
+ myName=n;myId=net.id;R={};convos={};glog=[];tab='g';activeC=null;gUnread=false;blockedIds={};pending={};cur=-1;lastKey='';lastPub=0;lastFull=0;force=true;helloP=null;lastNearOn=null;lastJk=null;musicLockUntil=0;musicBy='';onlinePeers={};
+ me={x:r2((Math.random()-.5)*8),y:r2(6+(Math.random()-.5)*4),d:0,s:0,h:0};
  mine={dn:0,dto:null,tDn:0,act:null,at:0,to:null,em:null,tAct:0,say:'',sa:0,tSay:0,drink:null,tDrink:0};
  document.body.classList.add('ingame');$('menu').classList.add('hide');$('game').classList.remove('hide');
  $('rn').textContent=r.name;$('mini').textContent='';$('reqs').textContent='';$('chat').classList.remove('open');$('rx').classList.remove('open');
+ $('online').style.display='inline-block';updateOnlineCount();
  if(!startGL(r)){net.leave();net=null;document.body.classList.remove('ingame');$('game').classList.add('hide');$('menu').classList.remove('hide');say('Seu navegador não conseguiu abrir o 3D.');startPreview();return}
  try{if(navigator.wakeLock)navigator.wakeLock.request('screen').then(l=>{if(GL)GL.wl=l}).catch(()=>{})}catch(e){}
- syncCell();showTab('g');setMusText();mini('Bem-vindo(a), '+n+'! 🎉');
+ showTab('g');setMusText();mini('Bem-vindo(a), '+n+'! 🎉');
  last=performance.now();raf=requestAnimationFrame(loop);
+ setInterval(()=>{if(net)net.ping()},2000);
 }
 function leaveGame(msg){cancelAnimationFrame(raf);stopSeq();stopAudio();stopGL();if(net){net.leave();net=null}
- document.body.classList.remove('ingame');$('chat').classList.remove('open');$('game').classList.add('hide');$('menu').classList.remove('hide');say(msg||'');startPreview()}
+ document.body.classList.remove('ingame');$('chat').classList.remove('open');$('game').classList.add('hide');$('menu').classList.remove('hide');$('online').style.display='none';say(msg||'');startPreview()}
 $('out').onclick=()=>leaveGame('');
-function syncCell(){const c=cellOf(me.x,me.y),ch=net.setCell(c[0],c[1]);if(ch){for(const id in R)if(!net.has(R[id].cell))delete R[id];helloP={p:ch.old||''};force=true}}
-function onHello(prev){const c=cellOf(me.x,me.y);if(prev){const p=prev.split('_');if(Math.abs(+p[0]-c[0])<=1&&Math.abs(+p[1]-c[1])<=1)return}
- if(Date.now()-lastFull>1200)setTimeout(()=>{force=true},Math.random()*350)}
+function syncCell(){}
+
+// ---- rede online
+function onOnline(m){if(m&&m.id&&m.id!==myId){onlinePeers[m.id]=Date.now();updateOnlineCount()}}
+function updateOnlineCount(){const t=Date.now();let c=1;for(const id in onlinePeers){if(t-onlinePeers[id]<6000)c++;else delete onlinePeers[id]}$('online').textContent='👥 '+c+' online'}
+setInterval(updateOnlineCount,2000);
 
 // ---- recebimento
 function onState(pid,cell,q){
  if(blockedIds[pid])return;
- if(q.g){if(R[pid]&&R[pid].cell===cell)delete R[pid];return}
- if(q.h){onHello(String(q.p||''));return}
+ if(q.g){if(R[pid])delete R[pid];return}
  if(typeof q.x!=='number'||typeof q.y!=='number')return;
  const now=Date.now();let e=R[pid];if(!e){if(!q.n)return;e=R[pid]={id:pid,sx:q.x,sy:q.y}}
  e.q=e.q?Object.assign({},e.q,q):q;e.cell=cell;e.seen=now;
@@ -531,15 +561,12 @@ document.querySelectorAll('.nb').forEach(b=>b.onclick=()=>{
  else if(b.dataset.q)sendReq(b.dataset.q);else if(b.id==='talk')openPrivate(nearE.id)});
 $('rxbtn').onclick=()=>$('rx').classList.toggle('open');
 document.querySelectorAll('#rx button').forEach(b=>b.onclick=()=>{const n=Date.now();mine.act='rx';mine.em=b.dataset.e;mine.at=n;mine.tAct=n;mine.to=null;force=true;$('rx').classList.remove('open')});
-// Drink
 $('drinkbtn').onclick=()=>{
- if(musicLockUntil>Date.now()){/* DJ ocupado, mas pode beber */}
  const d=DRINKS[Math.floor(Math.random()*DRINKS.length)];
  mine.drink={n:d.n,c:d.c};mine.tDrink=Date.now();force=true;
  toast('Você pegou '+d.n+' 🍹');
  setTimeout(()=>{if(mine.drink){mine.drink=null;force=true}},8000);
 };
-// DJ
 document.querySelectorAll('#jk button').forEach(b=>b.onclick=()=>{
  if(!net)return;const t=+b.dataset.t;
  if(t>=0&&musicLockUntil>Date.now())return toast('🔒 Música tocando. Aguarde terminar.');
@@ -594,10 +621,13 @@ function loop(now){
  if(phase()==='after'){leaveGame('A boate fechou. Obrigado por vir! 🌙');return}
  const ix=((keys.right?1:0)-(keys.left?1:0))||joy.x,iy=((keys.down?1:0)-(keys.up?1:0))||joy.y,mv=ix||iy;
  if(mv){const m=Math.hypot(ix,iy),sp=4.5*dt*Math.min(1,m),dx=ix/m*sp,dz=iy/m*sp;if(!blocked(me.x+dx,me.y))me.x+=dx;if(!blocked(me.x,me.y+dz))me.y+=dz;me.d=Math.atan2(ix,iy)}
- me.s=mv?1:0;me.h+=(elevAt(me.x,me.y)-me.h)*.25;syncCell();
+ me.s=mv?1:0;me.h+=(elevAt(me.x,me.y)-me.h)*.25;
  const key=r2(me.x)+','+r2(me.y)+','+r2(me.d)+','+me.s,dp=t-lastPub;
- if((force&&dp>90)||(key!==lastKey&&dp>(me.s?250:90))||dp>3000){if(helloP){net.pub({h:1,p:helloP.p});helloP=null}const full=force||dp>3000||t-lastFull>2800;net.pub(buildState(!full));lastPub=t;lastKey=key;force=false;if(full)lastFull=t}
- for(const id in R)if(t-R[id].seen>9000)delete R[id];
+ if((force&&dp>120)||(key!==lastKey&&dp>(me.s?220:900))||dp>2000){
+   const full=force||dp>2000||t-lastFull>2000;
+   net.pub(buildState(!full));lastPub=t;lastKey=key;force=false;if(full)lastFull=t
+ }
+ for(const id in R)if(t-R[id].seen>15000)delete R[id];
  const arr=[];for(const id in R){const e=R[id];e.sx+=(e.q.x-e.sx)*.3;e.sy+=(e.q.y-e.sy)*.3;e.dist=Math.hypot(e.sx-me.x,e.sy-me.y);arr.push(e)}
  arr.sort((a,b)=>a.dist-b.dist);
  const list=arr.slice(0,45).map(e=>({id:e.id,x:e.sx,y:e.sy,q:e.q,name:String(e.q.n||'?').slice(0,12),tAct:e.tAct||0,tDn:e.tDn||0,tSay:e.tSay||0,tDrink:e.tDrink||0,dist:e.dist,mv:e.q.s}));
@@ -616,23 +646,18 @@ function loop(now){
    f.o.fxA=a}
   else{e.fxT=f.a==='rx'?String(f.em||'✨').slice(0,4):(EMO[f.a]||'✨');e.fxP=[e.x,2.5+a*.5,e.y]}
   e.fxA=a}
- // Drink effect
  for(const e of list){if(e.q.drink&&t-e.tDrink<8000){e.fxT='🍹';e.fxP=[e.x,2.8,e.y];e.fxA=0}}
  let best=null,bd=2.5;for(const e of list){if(!e.me&&e.dist<bd){bd=e.dist;best=e}}
  nearE=best;
  if(!!best!==lastNearOn){lastNearOn=!!best;document.querySelectorAll('.nb').forEach(b=>{b.disabled=!best})}
  $('near').textContent=best?'💞 Perto de '+best.name:'Chegue perto de alguém para interagir';
- // Drink button visibility (near bar)
- const nearBar=me.x>22&&me.x<30&&me.y>0&&me.y<14;
+ const nearBar=(me.x>22&&me.x<26&&me.y>1&&me.y<13);
  $('drinkbtn').style.display=nearBar?'block':'none';
- // DJ visibility
- const nj=Math.hypot(me.x,me.y+21.5)<4;if(nj!==lastJk){lastJk=nj;$('jk').classList.toggle('hide',!nj)}
- // camera
+ const nj=(me.x>-10&&me.x<10&&me.y>-20.5&&me.y<-15.5);
+ if(nj!==lastJk){lastJk=nj;$('jk').classList.toggle('hide',!nj)}
  const tx=clamp(me.x,-24,24),tz=clamp(me.y,-18,18);GL.cx+=(tx-GL.cx)*.12;GL.cz+=(tz-GL.cz)*.12;
  GL.cam.position.set(GL.cx,11.5*GL.cf,GL.cz+10.5*GL.cf);GL.cam.lookAt(GL.cx,.5,GL.cz+GL.lz);GL.cam.updateMatrixWorld();
- // lights
  const bpm=cur>=0?120:0,ph=bpm?((k*bpm/60)%1):0,pulse=bpm?Math.pow(1-ph,3):0;animWorld(GL.W,k,bpm,pulse,t);
- // characters
  const alive={};
  for(const e of list){const id=e.id;alive[id]=1;let o=GL.ents[id];
   if(!o){const L=(Array.isArray(e.q.L)&&e.q.L.length===6)?e.q.L.map(v=>v|0):look;o=mkChar(L);o.tag=mkdiv('tag');o.bub=mkdiv('bub');o.fx=mkdiv('fxi');o.h=0;GL.sc.add(o.g);GL.ents[id]=o;o.tag.textContent=e.name;o.tag.style.color=SHCSS(L[3])}
