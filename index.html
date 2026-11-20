@@ -144,11 +144,8 @@ button:disabled{opacity:.35}
 </div>
 <script>
 // ======================= CONFIGURAÇÃO =======================
-const HIVEMQ={
-  host:'i262bdb3.ala.eu-central-1.emqxsl.com', // O Connection Address do EMQX (sem wss:// e sem porta)
-  user:'hawx',       // O usuário que você criou
-  pass:'*Cabritoneon17#'          // A senha que você definiu
-};
+// Mantido vazio para usar o servidor público estável do EMQX
+const HIVEMQ={host:'',user:'',pass:''};
 const PARTY={open:'',close:''};
 const NS='cp3-babacasfest-v3';
 // ==========================================================================
@@ -179,7 +176,9 @@ const SONGS=[
 // ======================= Rede (MQTT) — tópico único =======================
 async function connectNet(room,H){
  const id=Math.random().toString(36).slice(2,12),base=NS+'/'+room+'/';
- const brokers=HIVEMQ.host?[{url:'wss://'+HIVEMQ.host+':8084/mqtt',username:HIVEMQ.user,password:HIVEMQ.pass}]:[{url:'wss://broker.hivemq.com:8884/mqtt'},{url:'wss://broker.emqx.io:8084/mqtt'}];
+ // Fallback para o broker EMQX, que costuma aguentar mais conexões públicas
+ const brokers=HIVEMQ.host?[{url:'wss://'+HIVEMQ.host+':8084/mqtt',username:HIVEMQ.user,password:HIVEMQ.pass}]:[{url:'wss://broker.emqx.io:8084/mqtt'},{url:'wss://broker.hivemq.com:8884/mqtt'}];
+ let client=null;
  for(const b of brokers){
   try{client=await new Promise((res,rej)=>{
    const o={clientId:'cp_'+id,keepalive:30,reconnectPeriod:1500,connectTimeout:6000,clean:true};if(b.username){o.username=b.username;o.password=b.password}
