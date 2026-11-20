@@ -202,11 +202,9 @@ async function connectNet(room,H){
 
 // ======================= Músicas =======================
 const MUS=[
- {t:'Neon Chiptune',a:'Demo',f:'musica-chiptune.wav',d:40,bp:140},
- {t:'Samba da Babaca',a:'Demo',f:'musica-samba.wav',d:40,bp:112},
- {t:'Disco Fever',a:'Demo',f:'musica-disco.wav',d:40,bp:124},
- {t:'Dance Monster',a:'Kevin MacLeod',f:'https://ia800300.us.archive.org/15/items/Kevin-MacLeod_Medium-Electronic_2008_FullAlbum/Kevin%20MacLeod%20-%2003%20-%20Dance%20Monster.mp3',d:180,bp:120},
- {t:'Enter the Party',a:'Kevin MacLeod',f:'https://ia800300.us.archive.org/15/items/Kevin-MacLeod_Medium-Electronic_2008_FullAlbum/Kevin%20MacLeod%20-%2006%20-%20Enter%20the%20Party.mp3',d:180,bp:120}
+ // Faixas instrumentais eletrônicas de pista, sem voz ou letra.
+ {t:'Dance Monster · Beat Instrumental',a:'Kevin MacLeod',f:'https://ia800300.us.archive.org/15/items/Kevin-MacLeod_Medium-Electronic_2008_FullAlbum/Kevin%20MacLeod%20-%2003%20-%20Dance%20Monster.mp3',d:180,bp:120},
+ {t:'Enter the Party · Beat Instrumental',a:'Kevin MacLeod',f:'https://ia800300.us.archive.org/15/items/Kevin-MacLeod_Medium-Electronic_2008_FullAlbum/Kevin%20MacLeod%20-%2006%20-%20Enter%20the%20Party.mp3',d:180,bp:120}
 ];
 
 // ======================= Personagens =======================
@@ -543,7 +541,9 @@ function onAcc(m,fn){const key=m.f+m.act;if(!pending[key])return;clearTimeout(pe
 // ---- bar e bebidas
 DRINKS.forEach((d,i)=>{const b=document.createElement('button');b.textContent=d.e+' '+d.n;b.onclick=()=>makeDrink(i);$('bk').appendChild(b)});
 function makeDrink(i){
- if(!net||mine.dk||(mine.mk&&Date.now()-mine.tMk<2800)||mine.fall)return;
+ if(!net)return;
+ if(!me||me.x<23.8||me.x>29.55||me.y< -13.8||me.y>9.8){toast('Chegue até a frente do balcão para pedir 🍹');return}
+ if(mine.dk||(mine.mk&&Date.now()-mine.tMk<3000)||mine.fall)return;
  const n=Date.now();mine.mk=n;mine.tMk=n;mine.dk=0;mine.dd=0;force=true;toast('🍸 O bartender está preparando '+DRINKS[i].n+'…');
  setTimeout(()=>{
   if(!net)return;
@@ -683,8 +683,11 @@ function loop(now){
  $('near').textContent=best?'💞 Perto de '+best.name:'Chegue perto de alguém para interagir';
  const nj=me.h<1&&Math.hypot(me.x,me.y+15.6)<3.8;if(nj!==lastDj){lastDj=nj;$('jk').classList.toggle('hide',!nj);if(!nj)closePl()}
  // --- interação com bartender (distância dos NPCs no balcão) ---
- const nearBartender=me.h<1.05&&me.x>=25.2&&me.x<=29.25&&me.y>=-13.2&&me.y<=9.2;
- const hold=mine.dk>0,making=mine.mk&&t-mine.tMk<2800;
+ // O balcão fica em X=29.8 e ocupa Z=-12 até Z=8.
+ // O cliente é atendido pelo lado da pista (X menor que o balcão).
+ // A zona é propositalmente generosa para não exigir encaixe milimétrico.
+ const nearBartender=me.h<1.6&&me.x>=23.8&&me.x<=29.55&&me.y>=-13.8&&me.y<=9.8;
+ const hold=mine.dk>0,making=mine.mk&&t-mine.tMk<3000;
  const nb=nearBartender&&!hold&&!making&&!dead;
  if(nb!==lastBar){lastBar=nb;$('bk').classList.toggle('hide',!nb);$('bk').style.display=nb?'flex':'none'}
  if(hold!==lastHold){lastHold=hold;$('drinkbtn').disabled=!hold}
